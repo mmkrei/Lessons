@@ -1,0 +1,7 @@
+{
+    "port": "COM5",
+    "board": "arduino:avr:uno",
+    "programmer": "arduino:avrisp",
+    "sketch": "Lesson 5\\adjustableflash.ino",
+    "output": "../build"
+}
