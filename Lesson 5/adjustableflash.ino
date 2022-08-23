@@ -113,6 +113,4 @@ void updateDelay()
 	}
 
 	previousCLK = currentCLK;
-
-	delay(20); // Prevent bounce
 }
