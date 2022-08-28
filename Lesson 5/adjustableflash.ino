@@ -11,20 +11,20 @@
 #define ENC_DT 		PIN3
 #define ENC_SW 		PIN4
 
-// Flash delay variables
+// Flash delay definitions
 
 const int 	min			= 10;
 const int 	max			= 200;
 const int 	increment	= 10;
 int 		flashDelay	= 100;
 
-// Seven segment variables
+// Seven segment and rotary encoder definitions
 
-TM1637Display 	sevenSegment 	= TM1637Display(SEG_CLK, SEG_DIO);
+TM1637Display 	sevenSegment	= TM1637Display(SEG_CLK, SEG_DIO);
 int 			currentCLK 		= 0;
 int 			previousCLK 	= 0;
 
-// Light and switch variables
+// Light and switch definitions
 
 enum LED 	: int {LED1 = 10, LED2 = 11, LED3 = 12};
 enum Switch : int {SWITCH1 = 7, SWITCH2 = 8, SWITCH3 = 9};
@@ -32,7 +32,7 @@ enum Switch : int {SWITCH1 = 7, SWITCH2 = 8, SWITCH3 = 9};
 LED 	leds[3] 	= {LED1, LED2, LED3};
 Switch 	switches[3] = {SWITCH1, SWITCH2, SWITCH3};
 
-// Called at startup, use to initialize program
+// Called at startup, used to initialize program
 void setup()
 {
 	// Configure encoder
@@ -54,25 +54,34 @@ void setup()
 		pinMode(switches[i], INPUT);
 	}
 
-	// Various initialization
+	// Configure seven segment display
 
-	previousCLK = digitalRead(ENC_CLK);
 	sevenSegment.setBrightness(1);
 	sevenSegment.showNumberDec(flashDelay);
+
+	previousCLK = digitalRead(ENC_CLK);	// Initial encoder position
+
+	Serial.begin(9600);
 }
 
-// Determines if encoder reset requested, draws the delay to the seven segment display, and flashes the lights
+// Routine called at regular intervals
 void loop()
 {
+	// Reset delay if the encoder dislay is pressed
+
 	if (digitalRead(ENC_SW) == LOW)
 	{
 		flashDelay = 100;
 	}
 
+	// Flash the LEDs
+
 	for(int i = 0; i < 3; ++i)
 	{
 		flashLED(leds[i], switches[i]);
 	}
+
+	// Update the display
 
 	sevenSegment.showNumberDec(flashDelay);
 }
@@ -89,15 +98,25 @@ void flashLED(LED led, Switch pin)
 	}
 }
 
-// Determines direction of the encoder and sets the flash delay accordingly
+// Interrupt routine called when rotary encoder has pulsed
 void updateDelay()
 {
 	currentCLK = digitalRead(ENC_CLK);
 
-	if (currentCLK != previousCLK && currentCLK == 1)
+	Serial.print(">CLK:");
+	Serial.println(currentCLK);
+
+	if (currentCLK != previousCLK)
 	{
+		// Encoder has been rotated
+
+		Serial.print(">DT:");
+		Serial.println(digitalRead(ENC_DT));
+
 		if (digitalRead(ENC_DT) != currentCLK)
 		{
+			// Different signals indicate clockwise rotation
+
 			if(flashDelay < max)
 			{
 				flashDelay += increment;
@@ -105,12 +124,17 @@ void updateDelay()
 		}
 		else
 		{
+			// Same signals indicate counter-clockwise rotation
+
 			if(flashDelay > min)
 			{
 				flashDelay -= increment;
 			}
 		}
 	}
+
+	Serial.print(">Delay:");
+	Serial.println(flashDelay);
 
 	previousCLK = currentCLK;
 }
