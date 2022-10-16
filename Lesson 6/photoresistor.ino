@@ -5,6 +5,14 @@
 #define SEG_CLK	PIN6
 #define SEG_DIO PIN5
 
+// "Battery" level
+
+unsigned int	batteryCapacity	= 50000;
+unsigned int	batteryLevel 	= 0;
+unsigned int	ticks 			= 0;
+unsigned int	wait 			= 100;
+double			percentage;
+
 TM1637Display 	sevenSegment	= TM1637Display(SEG_CLK, SEG_DIO);
 
 // Photosensor
@@ -22,14 +30,50 @@ void setup()
 
 void loop()
 {
+	// Get photosensor value and flash light
+
 	sensorValue = analogRead(sensonPin);
 	digitalWrite(onboardLED, HIGH);
 	delay(sensorValue);
 	digitalWrite(onboardLED, LOW);
 	delay(sensorValue);
 	
-	sevenSegment.showNumberDec(sensorValue);
+	// Adjust the battery level (based on input from the photosensor)
 
-	Serial.print(">sensorValue:");
-	Serial.println(sensorValue);
+	batteryLevel	+= sensorValue;
+  	ticks 			+= wait;
+ 
+	if(batteryLevel >= batteryCapacity) 
+	{
+		// Battery level is full 
+		
+		Serial.print(ticks);
+		Serial.print(">ms:");
+		Serial.println("FULLY CHARGED");
+	
+		batteryLevel = batteryCapacity; // to prevent integer from continuing to increase
+		
+		ticks = 0;
+		
+		delay(20000);	// long pause
+	}
+	else 
+	{
+		PrintBatteryPercentage();
+	}
+ 
+ 	delay(wait);
+	sevenSegment.showNumberDecEx(percentage);
+}
+
+void PrintBatteryPercentage() 
+{
+	Serial.print(ticks);
+	Serial.print(" ms    charge at ");
+
+	percentage=100*((double)batteryLevel / (double)batteryCapacity);
+	Serial.print(percentage);
+
+	// print a percent character and line return...
+	Serial.println("%");
 }
