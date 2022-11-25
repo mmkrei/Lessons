@@ -1,7 +1,7 @@
 {
-    "port": "COM5",
+    "port": "COM3",
     "board": "arduino:avr:uno",
     "programmer": "arduino:avrisp",
-    "sketch": "Lesson 6\\photoresistor.ino",
+    "sketch": "Lesson 8\\rgbpwm.ino",
     "output": "../build"
 }
