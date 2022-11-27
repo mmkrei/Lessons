@@ -1,5 +1,9 @@
 #include <TM1637Display.h>
 
+// Battery percent macro
+
+#define BATTERY_PERCENT 100*((double)batteryLevel / (double)batteryCapacity)
+
 // Seven segment
 
 #define SEG_CLK	PIN6
@@ -11,15 +15,15 @@ unsigned int	batteryCapacity	= 50000;
 unsigned int	batteryLevel 	= 0;
 unsigned int	ticks 			= 0;
 unsigned int	wait 			= 100;
-double			percentage;
 
 TM1637Display 	sevenSegment	= TM1637Display(SEG_CLK, SEG_DIO);
 
 // Photosensor
 
-int sensonPin 	= A0;
-int onboardLED	= 13;
-int sensorValue = 0;
+int 		sensorPin 	= A0;
+int 		onboardLED	= 13;
+int 		sensorValue = 0;
+const int	sensorMax	= 500; // Determined empirically to be ~500 at maximum brightness
 
 void setup()
 {
@@ -30,50 +34,52 @@ void setup()
 
 void loop()
 {
-	// Get photosensor value and flash light
+	// Get photosensor value and flash onboard LED
 
-	sensorValue = analogRead(sensonPin);
-	digitalWrite(onboardLED, HIGH);
-	delay(sensorValue);
-	digitalWrite(onboardLED, LOW);
-	delay(sensorValue);
-	
-	// Adjust the battery level (based on input from the photosensor)
+	sensorValue = analogRead(sensorPin);
+	flashOnboardLED(((double)(sensorMax - sensorValue)/sensorMax) * 100); // Flash faster with increased brightness
 
-	batteryLevel	+= sensorValue;
-  	ticks 			+= wait;
- 
-	if(batteryLevel >= batteryCapacity) 
-	{
-		// Battery level is full 
-		
-		Serial.print(ticks);
-		Serial.print(">ms:");
-		Serial.println("FULLY CHARGED");
-	
-		batteryLevel = batteryCapacity; // to prevent integer from continuing to increase
-		
-		ticks = 0;
-		
-		delay(20000);	// long pause
-	}
-	else 
-	{
-		PrintBatteryPercentage();
-	}
- 
- 	delay(wait);
-	sevenSegment.showNumberDecEx(percentage);
+	// Calculate battery level (prevent calculation that exceeds capacity)
+
+	batteryLevel += (batteryLevel >= batteryCapacity) ? 0 : sensorValue;
+
+	// Print to serial and seven segment
+
+	printToSerial(true);
+ 	sevenSegment.showNumberDecEx(BATTERY_PERCENT);
+
+	// Delay and add to tick count used for serial output
+
+	delay(wait);
+	ticks += wait;
 }
 
-void PrintBatteryPercentage() 
+// Flashes the onboard LED, using "flashDelay" parameter as a delay
+void flashOnboardLED(int flashDelay)
 {
-	Serial.print(ticks);
-	Serial.print(" ms    charge at ");
+	digitalWrite(onboardLED, HIGH);
+	delay(flashDelay);
+	digitalWrite(onboardLED, LOW);
+	delay(flashDelay);
+}
 
-	percentage=100*((double)batteryLevel / (double)batteryCapacity);
-	Serial.print(percentage);
-
-	// print a percent character and line return...
-	Serial.println("%");
+// Prints to serial or VS Code's teleplot extension when "printPlot" is set to 'true'
+void printToSerial(bool printPlot) 
+{
+	if(printPlot)
+	{
+		Serial.print(">Level:");
+		Serial.println(batteryLevel);
+		Serial.print(">Percent:");
+		Serial.println(BATTERY_PERCENT);
+		Serial.print(">Sensor:");
+		Serial.println(sensorValue);
+	}
+	else
+	{
+		Serial.print(ticks);
+		Serial.print(" ms    charge at ");
+		Serial.print(BATTERY_PERCENT);
+		Serial.println("%");
+	}
 }
